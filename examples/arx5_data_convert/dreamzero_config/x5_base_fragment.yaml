@@ -1,0 +1,71 @@
+# Insert the modality_config_x5 and transform_x5 blocks before the global maps in
+# groot/vla/configs/data/dreamzero/base_48_wan_fine_aug_relative.yaml.
+
+modality_config_x5:
+  video:
+    _target_: groot.vla.data.dataset.ModalityConfig
+    delta_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    eval_delta_indices: [0]
+    modality_keys:
+      - video.front
+      - video.wrist
+  state:
+    _target_: groot.vla.data.dataset.ModalityConfig
+    delta_indices: [0]
+    modality_keys:
+      - state.eef_position
+      - state.eef_rotation
+      - state.gripper_position
+  action:
+    _target_: groot.vla.data.dataset.ModalityConfig
+    delta_indices: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]
+    modality_keys:
+      - action.eef_position
+      - action.eef_rotation
+      - action.gripper_position
+  language:
+    _target_: groot.vla.data.dataset.ModalityConfig
+    delta_indices: [0]
+    modality_keys:
+      - annotation.task
+
+transform_x5:
+  _target_: groot.vla.data.transform.ComposedModalityTransform
+  transforms:
+    - <<: *totensor_cfg
+      apply_to: ${modality_config_x5.video.modality_keys}
+    - <<: *crop_cfg
+      apply_to: ${modality_config_x5.video.modality_keys}
+    - <<: *resize_cfg
+      apply_to: ${modality_config_x5.video.modality_keys}
+    - <<: *color_jitter_cfg
+      apply_to: ${modality_config_x5.video.modality_keys}
+    - <<: *to_numpy_cfg
+      apply_to: ${modality_config_x5.video.modality_keys}
+    - _target_: groot.vla.data.transform.StateActionToTensor
+      apply_to: ${modality_config_x5.state.modality_keys}
+    - _target_: groot.vla.data.transform.StateActionTransform
+      apply_to: ${modality_config_x5.state.modality_keys}
+      normalization_modes:
+        state.eef_position: q99
+        state.eef_rotation: q99
+        state.gripper_position: q99
+    - _target_: groot.vla.data.transform.StateActionToTensor
+      apply_to: ${modality_config_x5.action.modality_keys}
+    - _target_: groot.vla.data.transform.StateActionTransform
+      apply_to: ${modality_config_x5.action.modality_keys}
+      normalization_modes:
+        action.eef_position: q99
+        action.eef_rotation: q99
+        action.gripper_position: q99
+    - _target_: groot.vla.data.transform.ConcatTransform
+      video_concat_order: ${modality_config_x5.video.modality_keys}
+      state_concat_order: ${modality_config_x5.state.modality_keys}
+      action_concat_order: ${modality_config_x5.action.modality_keys}
+    - ${model_specific_transform}
+
+# Also add these entries to the existing maps (do not create duplicate map names):
+# modality_configs:  x5: ${modality_config_x5}
+# transforms:        x5: ${transform_x5}
+# metadata_versions: x5: '0221'
+# fps:               x5: 30
